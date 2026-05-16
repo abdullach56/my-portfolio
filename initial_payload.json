@@ -1,0 +1,18 @@
+[
+    {
+        "id": "1",
+        "title": "Doodle Fuel Admin",
+        "tags": ["SaaS Architecture", "Fintech"],
+        "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuDz4JrDLrc2mkyre3uElA_PV5kNQ_qQTmq_TJ2xyh961AAr-KXvLmuPWSEhr3A6dEcu9LCWCmMYozB3qo0jY1gIt5XGICK7Zxxi1BDhDwhCnRIuuwlCCt1nJTm8wamajrm3tErO73tfzjK6c6DnS3TvBdHDbMgm7Hbe5G7jDC_c9cBCsR-bjUbj-PGHqkG_V-M1a1OK178lHyuawHiOAECfl4zIUU7eeXeDeXD56sQTiT3dQXOawCUMkPL-cgEU0OZ93ZBtzYDjY7Ps",
+        "link": "https://github.com/abdullach56/my-portfolio",
+        "status": "STABLE DEPLOYMENT // LONDON_DC_01"
+    },
+    {
+        "id": "2",
+        "title": "Vanguard Travel",
+        "tags": ["Mobile Interface", "Editorial"],
+        "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuDfOKfHqqt_eQkXqb-70Ce2WOLiQ8SzCPT1kOmdB69NPpdXCHLXQRqaktOIDLeMTzrhBxHd9NeSDmSa90qHcPdlXh1ulH_6sESXi8n7UUqBnwJzB3oHFX58BpKyjXHYk00rBK4IHAbLiQ5dTrK8Vc8ZZW0j-If3wWoKI-_IHNJuM1hL_UuXfKoIRaTMZf9zHzgORj2cR8udF1s5RVoxpueZgL0dXEHDQqLnRgXuX54fScNnNLwPvnkx7rXecuchEq6-TcboDSXcwXuJ",
+        "link": "https://github.com/abdullach56/my-portfolio",
+        "status": "UI_SYNC // PROGRESS: 100%"
+    }
+]
