@@ -9,6 +9,7 @@ let activeTab = 'dashboard';
 
 const STORAGE_KEY = 'studio_dev_projects_v1';
 const PIN_KEY = 'studio_dev_admin_pin_v1';
+const GITHUB_TOKEN_KEY = 'studio_dev_github_token';
 const DEFAULT_PIN = 'BHHB';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -204,13 +205,14 @@ function renderDashboard(container) {
 
         <div class="p-8 border border-primary/30 bg-primary/5 space-y-6">
             <div>
-                <h3 class="text-lg font-light mb-2 text-primary">Global Deployment</h3>
-                <p class="text-sm text-outline">To make your changes visible to the world, click the button below to download your updated project file. Then, simply upload it to your GitHub repository.</p>
+                <h3 class="text-lg font-light mb-2 text-primary">Global Deployment (Automated)</h3>
+                <p class="text-sm text-outline">Clicking this button will instantly update your live website for everyone. Make sure your GitHub Token is configured in the Settings tab.</p>
             </div>
             <button onclick="publishToGitHub()" class="flex items-center gap-4 bg-primary text-background px-8 py-4 text-[10px] font-bold tracking-widest uppercase hover:opacity-90 transition-opacity">
                 <span class="material-symbols-outlined">publish</span>
                 Publish Changes to World
             </button>
+            <div id="publish-status" class="text-[10px] font-mono tracking-widest mt-2 hidden"></div>
         </div>
 
         <div class="border border-outline-variant">
@@ -299,15 +301,62 @@ window.handleAddProject = function() {
     });
 };
 
-window.publishToGitHub = function() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projects, null, 4));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href",     dataStr);
-    downloadAnchorNode.setAttribute("download", "projects.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-    alert("Project data downloaded! Now upload this 'projects.json' file to your GitHub repository to update the website for everyone.");
+window.publishToGitHub = async function() {
+    const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+    const statusEl = document.getElementById('publish-status');
+    
+    if (!token) {
+        alert("GitHub Token is missing. Please go to the Settings tab and add your Personal Access Token.");
+        switchTab('settings');
+        return;
+    }
+
+    statusEl.classList.remove('hidden', 'text-error', 'text-primary');
+    statusEl.classList.add('text-outline');
+    statusEl.innerText = "INITIATING DEPLOYMENT...";
+
+    try {
+        // 1. Get current file SHA
+        const repoUrl = 'https://api.github.com/repos/abdullach56/my-portfolio/contents/projects.json';
+        let sha = null;
+        
+        const getRes = await fetch(repoUrl, {
+            headers: { 'Authorization': `token ${token}` }
+        });
+        
+        if (getRes.ok) {
+            const fileData = await getRes.json();
+            sha = fileData.sha;
+        }
+
+        // 2. Upload new content
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 4))));
+        const putRes = await fetch(repoUrl, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: "Auto-deploy: Update projects.json via Admin Panel",
+                content: content,
+                sha: sha
+            })
+        });
+
+        if (putRes.ok) {
+            statusEl.classList.remove('text-outline');
+            statusEl.classList.add('text-primary');
+            statusEl.innerText = "DEPLOYMENT SUCCESSFUL // WORLD SYNCHRONIZED";
+        } else {
+            const err = await putRes.json();
+            throw new Error(err.message || "Upload failed");
+        }
+    } catch (e) {
+        statusEl.classList.remove('text-outline');
+        statusEl.classList.add('text-error');
+        statusEl.innerText = `ERROR: ${e.message}`;
+    }
 };
 
 window.switchTab = function(tab) {
@@ -317,12 +366,14 @@ window.switchTab = function(tab) {
 
 function renderSettings(container) {
     const currentPin = localStorage.getItem(PIN_KEY) || DEFAULT_PIN;
+    const currentToken = localStorage.getItem(GITHUB_TOKEN_KEY) || '';
+    
     container.innerHTML = `
         <header class="mb-12">
             <h2 class="text-3xl font-light mb-2">System Settings</h2>
             <p class="text-outline text-sm">Configure security and environment variables.</p>
         </header>
-        <div class="max-w-md space-y-8">
+        <div class="max-w-xl space-y-8">
             <div class="p-8 border border-outline-variant bg-surface-container-low">
                 <h3 class="font-label-caps text-[10px] tracking-widest uppercase text-primary mb-6">Security Override</h3>
                 <div class="space-y-4">
@@ -337,9 +388,36 @@ function renderSettings(container) {
                     <button onclick="updatePin()" class="w-full bg-white text-black py-4 text-[10px] font-bold tracking-widest uppercase hover:bg-primary transition-colors mt-4">Update Encryption Key</button>
                 </div>
             </div>
+
+            <div class="p-8 border border-outline-variant bg-surface-container-low">
+                <h3 class="font-label-caps text-[10px] tracking-widest uppercase text-primary mb-6">GitHub Auto-Deployment</h3>
+                <p class="text-[12px] text-outline mb-6 leading-relaxed">
+                    To enable 1-click global publishing without leaving this website, you need a GitHub Personal Access Token (PAT).<br><br>
+                    <a href="https://github.com/settings/tokens/new?scopes=repo&description=DoodleFuel+AutoDeploy" target="_blank" class="underline hover:text-white transition-colors">Click here to generate a token</a>. 
+                    (Scroll down, click "Generate Token", and paste it below).
+                </p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] text-outline uppercase tracking-widest mb-2">Personal Access Token</label>
+                        <input type="password" id="gh-token" value="${currentToken}" class="w-full bg-background border border-outline-variant p-3 text-sm focus:outline-none focus:border-primary transition-colors" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                    </div>
+                    <button onclick="updateGitHubToken()" class="w-full bg-white text-black py-4 text-[10px] font-bold tracking-widest uppercase hover:bg-primary transition-colors mt-4">Save Token</button>
+                </div>
+            </div>
         </div>
     `;
 }
+
+window.updateGitHubToken = function() {
+    const token = document.getElementById('gh-token').value.trim();
+    if (token) {
+        localStorage.setItem(GITHUB_TOKEN_KEY, token);
+        alert('GitHub Token saved successfully. You can now use 1-click publishing!');
+    } else {
+        localStorage.removeItem(GITHUB_TOKEN_KEY);
+        alert('GitHub Token removed.');
+    }
+};
 
 window.updatePin = function() {
     const newPin = document.getElementById('new-pin').value;
