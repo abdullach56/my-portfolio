@@ -1,60 +1,64 @@
 /* 
-    STUDIO_DEV Core Logic
-    Handling Project Persistence & Admin Interactivity
+    DOODLE FUEL Core Logic
+    Handling Global Project Synchronization & Admin Interactivity
 */
 
-document.addEventListener('DOMContentLoaded', () => {
-    initPersistence();
+let projects = [];
+let isUnlocked = false;
+let activeTab = 'dashboard';
+
+const STORAGE_KEY = 'studio_dev_projects_v1';
+const PIN_KEY = 'studio_dev_admin_pin_v1';
+const DEFAULT_PIN = 'BHHB';
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await initData();
     initAdminTabs();
     renderContent();
 });
 
-// --- PERSISTENCE LAYER ---
-const STORAGE_KEY = 'studio_dev_projects_v1';
-const PIN_KEY = 'studio_dev_admin_pin_v1';
-
-const DEFAULT_PIN = 'BHHB'; // "BH HB" as requested
-let isUnlocked = false;
-let activeTab = 'dashboard';
-
-const DEFAULT_PROJECTS = [
-    {
-        id: '1',
-        title: 'Doodle Fuel Admin',
-        tags: ['SaaS Architecture', 'Fintech'],
-        image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDz4JrDLrc2mkyre3uElA_PV5kNQ_qQTmq_TJ2xyh961AAr-KXvLmuPWSEhr3A6dEcu9LCWCmMYozB3qo0jY1gIt5XGICK7Zxxi1BDhDwhCnRIuuwlCCt1nJTm8wamajrm3tErO73tfzjK6c6DnS3TvBdHDbMgm7Hbe5G7jDC_c9cBCsR-bjUbj-PGHqkG_V-M1a1OK178lHyuawHiOAECfl4zIUU7eeXeDeXD56sQTiT3dQXOawCUMkPL-cgEU0OZ93ZBtzYDjY7Ps',
-        status: 'STABLE DEPLOYMENT // LONDON_DC_01'
-    },
-    {
-        id: '2',
-        title: 'Vanguard Travel',
-        tags: ['Mobile Interface', 'Editorial'],
-        image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDfOKfHqqt_eQkXqb-70Ce2WOLiQ8SzCPT1kOmdB69NPpdXCHLXQRqaktOIDLeMTzrhBxHd9NeSDmSa90qHcPdlXh1ulH_6sESXi8n7UUqBnwJzB3oHFX58BpKyjXHYk00rBK4IHAbLiQ5dTrK8Vc8ZZW0j-If3wWoKI-_IHNJuM1hL_UuXfKoIRaTMZf9zHzgORj2cR8udF1s5RVoxpueZgL0dXEHDQqLnRgXuX54fScNnNLwPvnkx7rXecuchEq6-TcboDSXcwXuJ',
-        status: 'UI_SYNC // PROGRESS: 100%'
+// --- DATA LAYER ---
+async function initData() {
+    // 1. Try to fetch the global projects file from GitHub/Server
+    try {
+        const response = await fetch('projects.json?t=' + Date.now());
+        if (response.ok) {
+            const globalData = await response.json();
+            // If we have global data, and no local "drafts", use global
+            if (!localStorage.getItem(STORAGE_KEY)) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(globalData));
+            }
+            projects = globalData;
+        }
+    } catch (e) {
+        console.log("No global projects.json found, using local storage.");
     }
-];
 
-function initPersistence() {
-    if (!localStorage.getItem(STORAGE_KEY)) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PROJECTS));
+    // 2. Load the current working version (Draft) from LocalStorage
+    const localData = localStorage.getItem(STORAGE_KEY);
+    if (localData) {
+        projects = JSON.parse(localData);
     }
 }
 
 function getProjects() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return projects;
 }
 
 function saveProject(project) {
-    const projects = getProjects();
     projects.unshift(project);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    syncLocal();
     renderContent();
 }
 
 function deleteProject(id) {
-    const projects = getProjects().filter(p => p.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    projects = projects.filter(p => p.id !== id);
+    syncLocal();
     renderContent();
+}
+
+function syncLocal() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 }
 
 // --- RENDERING ENGINE ---
@@ -66,7 +70,6 @@ function renderContent() {
 function renderProjectGrid() {
     const grid = document.getElementById('projects-grid');
     if (!grid) return;
-    const projects = getProjects();
 
     grid.innerHTML = projects.map((p, index) => `
         <div onclick="${p.link ? `window.open('${p.link}', '_blank')` : ''}" class="group cursor-pointer ${index % 2 !== 0 ? 'md:mt-40' : ''}">
@@ -80,7 +83,7 @@ function renderProjectGrid() {
                 <div class="space-y-2">
                     <h3 class="text-3xl font-light">${p.title}</h3>
                     <div class="flex gap-4">
-                        ${p.tags.map(t => `<span class="font-label-caps text-[10px] text-outline uppercase tracking-widest">${t}</span>`).join('')}
+                        ${(p.tags || []).map(t => `<span class="font-label-caps text-[10px] text-outline uppercase tracking-widest">${t}</span>`).join('')}
                     </div>
                 </div>
                 <span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors group-hover:translate-x-1 group-hover:-translate-y-1">arrow_outward</span>
@@ -94,7 +97,7 @@ function initAdminTabs() {
     const btns = document.querySelectorAll('.admin-tab-btn');
     btns.forEach(btn => {
         btn.addEventListener('click', () => {
-            if (!isUnlocked) return; // Prevent tab switching if locked
+            if (!isUnlocked) return;
             btns.forEach(b => b.classList.remove('active', 'text-white'));
             btns.forEach(b => b.classList.add('text-outline'));
             btn.classList.add('active', 'text-white');
@@ -104,12 +107,11 @@ function initAdminTabs() {
         });
     });
 
-    // Handle Admin Toggle with PIN logic
     window.addEventListener('keydown', (e) => {
         if (e.shiftKey && (e.key === 'A' || e.key === 'a')) {
             const overlay = document.getElementById('adminOverlay');
             if (overlay) {
-                e.preventDefault(); // Prevent browser default behavior if any
+                e.preventDefault();
                 document.body.classList.toggle('admin-active');
                 if (document.body.classList.contains('admin-active')) {
                     renderAdminView();
@@ -143,11 +145,11 @@ function renderAdminView() {
 
 function renderLockScreen(container) {
     container.innerHTML = `
-        <div class="flex flex-col items-center justify-center h-full space-y-8 animate-pulse">
+        <div class="flex flex-col items-center justify-center h-full space-y-8">
             <div class="text-center">
-                <span class="material-symbols-outlined text-6xl text-primary mb-4">lock</span>
+                <span class="material-symbols-outlined text-6xl text-primary mb-4 animate-pulse">lock</span>
                 <h2 class="text-2xl font-mono tracking-widest uppercase">Encrypted Access</h2>
-                <p class="text-[10px] text-outline uppercase tracking-[0.3em] mt-2">Enter 4-Digit Encryption Key (BH HB)</p>
+                <p class="text-[10px] text-outline uppercase tracking-[0.3em] mt-2">Enter 4-Digit Encryption Key</p>
             </div>
             <div class="flex gap-4">
                 <input type="password" maxlength="4" id="pin-input" autofocus
@@ -157,7 +159,6 @@ function renderLockScreen(container) {
             <button onclick="handleUnlock()" class="px-12 py-3 border border-outline-variant hover:bg-white hover:text-black transition-all font-bold text-[10px] tracking-widest uppercase">Decrypt System</button>
         </div>
     `;
-    
     const input = document.getElementById('pin-input');
     input.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleUnlock(); });
 }
@@ -177,42 +178,7 @@ window.handleUnlock = function() {
     }
 };
 
-function renderSettings(container) {
-    const currentPin = localStorage.getItem(PIN_KEY) || DEFAULT_PIN;
-    container.innerHTML = `
-        <header class="mb-12">
-            <h2 class="text-3xl font-light mb-2">System Settings</h2>
-            <p class="text-outline text-sm">Configure security and environment variables.</p>
-        </header>
-        <div class="max-w-md space-y-8">
-            <div class="p-8 border border-outline-variant bg-surface-container-low">
-                <h3 class="font-label-caps text-[10px] tracking-widest uppercase text-primary mb-6">Security Override</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-[10px] text-outline uppercase tracking-widest mb-2">Current PIN</label>
-                        <input type="text" value="${currentPin}" disabled class="w-full bg-background/50 border border-outline-variant/30 p-3 text-sm opacity-50 cursor-not-allowed">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-outline uppercase tracking-widest mb-2">New 4-Digit PIN</label>
-                        <input type="text" id="new-pin" maxlength="4" class="w-full bg-background border border-outline-variant p-3 text-sm focus:outline-none focus:border-primary transition-colors" placeholder="e.g. 1234">
-                    </div>
-                    <button onclick="updatePin()" class="w-full bg-white text-black py-4 text-[10px] font-bold tracking-widest uppercase hover:bg-primary transition-colors mt-4">Update Encryption Key</button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-window.updatePin = function() {
-    const newPin = document.getElementById('new-pin').value;
-    if (newPin.length !== 4) return alert('PIN must be exactly 4 characters.');
-    localStorage.setItem(PIN_KEY, newPin.toUpperCase());
-    alert('Encryption Key Updated Successfully.');
-    renderAdminView();
-};
-
 function renderDashboard(container) {
-    const projects = getProjects();
     container.innerHTML = `
         <header class="flex justify-between items-end">
             <div>
@@ -227,14 +193,26 @@ function renderDashboard(container) {
                 <span class="text-3xl font-mono">${projects.length}</span>
             </div>
             <div class="p-6 border border-outline-variant bg-surface-container">
-                <span class="text-[10px] font-label-caps text-outline block mb-4">SYSTEM LOAD</span>
-                <span class="text-3xl font-mono">OPTIMAL</span>
+                <span class="text-[10px] font-label-caps text-outline block mb-4">SYSTEM STATUS</span>
+                <span class="text-3xl font-mono">STABLE</span>
             </div>
             <div class="p-6 border border-outline-variant bg-surface-container">
                 <span class="text-[10px] font-label-caps text-outline block mb-4">UPTIME</span>
                 <span class="text-3xl font-mono">99.9%</span>
             </div>
         </div>
+
+        <div class="p-8 border border-primary/30 bg-primary/5 space-y-6">
+            <div>
+                <h3 class="text-lg font-light mb-2 text-primary">Global Deployment</h3>
+                <p class="text-sm text-outline">To make your changes visible to the world, click the button below to download your updated project file. Then, simply upload it to your GitHub repository.</p>
+            </div>
+            <button onclick="publishToGitHub()" class="flex items-center gap-4 bg-primary text-background px-8 py-4 text-[10px] font-bold tracking-widest uppercase hover:opacity-90 transition-opacity">
+                <span class="material-symbols-outlined">publish</span>
+                Publish Changes to World
+            </button>
+        </div>
+
         <div class="border border-outline-variant">
             <div class="bg-surface-container p-4 border-b border-outline-variant flex justify-between items-center">
                 <span class="text-[10px] font-label-caps uppercase tracking-widest">Active Jobs</span>
@@ -256,7 +234,6 @@ function renderDashboard(container) {
 }
 
 function renderProjectsManager(container) {
-    const projects = getProjects();
     container.innerHTML = `
         <header class="mb-12">
             <h2 class="text-3xl font-light mb-2">Project Manager</h2>
@@ -264,7 +241,6 @@ function renderProjectsManager(container) {
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-            <!-- Add Project Form -->
             <div class="space-y-6 p-8 border border-outline-variant bg-surface-container-low">
                 <h3 class="font-label-caps text-[10px] tracking-widest uppercase text-primary">Add New Project</h3>
                 <div class="space-y-4">
@@ -288,7 +264,6 @@ function renderProjectsManager(container) {
                 </div>
             </div>
 
-            <!-- Existing Projects List -->
             <div class="space-y-4">
                 <h3 class="font-label-caps text-[10px] tracking-widest uppercase text-outline">Registry</h3>
                 <div class="divide-y divide-outline-variant border border-outline-variant">
@@ -324,7 +299,52 @@ window.handleAddProject = function() {
     });
 };
 
+window.publishToGitHub = function() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projects, null, 4));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href",     dataStr);
+    downloadAnchorNode.setAttribute("download", "projects.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    alert("Project data downloaded! Now upload this 'projects.json' file to your GitHub repository to update the website for everyone.");
+};
+
 window.switchTab = function(tab) {
     const btn = document.querySelector(`.admin-tab-btn[data-tab="${tab}"]`);
     if (btn) btn.click();
+};
+
+function renderSettings(container) {
+    const currentPin = localStorage.getItem(PIN_KEY) || DEFAULT_PIN;
+    container.innerHTML = `
+        <header class="mb-12">
+            <h2 class="text-3xl font-light mb-2">System Settings</h2>
+            <p class="text-outline text-sm">Configure security and environment variables.</p>
+        </header>
+        <div class="max-w-md space-y-8">
+            <div class="p-8 border border-outline-variant bg-surface-container-low">
+                <h3 class="font-label-caps text-[10px] tracking-widest uppercase text-primary mb-6">Security Override</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] text-outline uppercase tracking-widest mb-2">Current PIN</label>
+                        <input type="text" value="${currentPin}" disabled class="w-full bg-background/50 border border-outline-variant/30 p-3 text-sm opacity-50 cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-outline uppercase tracking-widest mb-2">New 4-Digit PIN</label>
+                        <input type="text" id="new-pin" maxlength="4" class="w-full bg-background border border-outline-variant p-3 text-sm focus:outline-none focus:border-primary transition-colors" placeholder="e.g. 1234">
+                    </div>
+                    <button onclick="updatePin()" class="w-full bg-white text-black py-4 text-[10px] font-bold tracking-widest uppercase hover:bg-primary transition-colors mt-4">Update Encryption Key</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+window.updatePin = function() {
+    const newPin = document.getElementById('new-pin').value;
+    if (newPin.length !== 4) return alert('PIN must be exactly 4 characters.');
+    localStorage.setItem(PIN_KEY, newPin.toUpperCase());
+    alert('Encryption Key Updated Successfully.');
+    renderAdminView();
 };
