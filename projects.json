@@ -1,23 +1,12 @@
 [
     {
-        "id": "1781790743739",
-        "title": "SCANGEN-PRO",
-        "image": "https://yourimageshare.com/ib/16omt6RxUC.png",
+        "id": "1781794104828",
+        "title": "ScanGEN-PRO",
+        "image": "https://yourimageshare.com/ib/HSx34s5R1d.png",
         "link": "https://scangen-pro.netlify.app/",
         "tags": [
-            "QRCODESCANNER",
-            "QRGENERATOR"
-        ],
-        "status": "NEW_DEPLOYMENT // SYNC_SUCCESS"
-    },
-    {
-        "id": "1780401142570",
-        "title": "Servicotools",
-        "image": "https://yourimageshare.com/ib/ge3TaRH4ct.png",
-        "link": "https://ai-servicotools.netlify.app/",
-        "tags": [
-            "AI-TOOLS",
-            "COMMON TOOLS"
+            "QRScanner",
+            "QRGenerator"
         ],
         "status": "NEW_DEPLOYMENT // SYNC_SUCCESS"
     }
