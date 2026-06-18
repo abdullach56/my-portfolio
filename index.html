@@ -334,7 +334,7 @@
         </div>
     </div>
     <script>
-            // Three.js Executive Precision Implementation
+            // Three.js 3D DF Text Implementation
             (function () {
                 const container = document.getElementById('canvas-container');
                 const scene = new THREE.Scene();
@@ -345,25 +345,42 @@
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
                 container.appendChild(renderer.domElement);
 
-                const geometry = new THREE.IcosahedronGeometry(2, 15);
-                const material = new THREE.MeshBasicMaterial({
+                // Create 3D text geometry for "DF"
+                const textGroup = new THREE.Group();
+                
+                // Create individual letters using extruded box geometries (fast and clean)
+                const letterMaterial = new THREE.MeshBasicMaterial({
                     color: 0x919095,
                     wireframe: true,
                     transparent: true,
-                    opacity: 0.15
+                    opacity: 0.12
                 });
-                const sphere = new THREE.Mesh(geometry, material);
-                scene.add(sphere);
 
-                const innerGeometry = new THREE.IcosahedronGeometry(1.9, 8);
-                const innerMaterial = new THREE.MeshBasicMaterial({
+                // Letter "D" geometry
+                const dGeometry = new THREE.BoxGeometry(0.8, 2, 0.3);
+                const dMesh = new THREE.Mesh(dGeometry, letterMaterial);
+                dMesh.position.x = -1.2;
+                textGroup.add(dMesh);
+
+                // Letter "F" geometry
+                const fGeometry = new THREE.BoxGeometry(0.8, 2, 0.3);
+                const fMesh = new THREE.Mesh(fGeometry, letterMaterial);
+                fMesh.position.x = 1.2;
+                textGroup.add(fMesh);
+
+                // Add decorative accent
+                const accentGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+                const accentMaterial = new THREE.MeshBasicMaterial({
                     color: 0xc7c6cd,
                     wireframe: true,
                     transparent: true,
-                    opacity: 0.05
+                    opacity: 0.08
                 });
-                const innerSphere = new THREE.Mesh(innerGeometry, innerMaterial);
-                scene.add(innerSphere);
+                const accent = new THREE.Mesh(accentGeometry, accentMaterial);
+                accent.position.z = 0.5;
+                textGroup.add(accent);
+
+                scene.add(textGroup);
 
                 camera.position.z = 5;
 
@@ -385,15 +402,12 @@
 
                 function animate() {
                     requestAnimationFrame(animate);
-                    sphere.rotation.y += 0.001;
-                    sphere.rotation.x += 0.0005;
-                    innerSphere.rotation.y -= 0.0008;
+                    textGroup.rotation.y += 0.001;
+                    textGroup.rotation.x += 0.0005;
                     targetX += (mouseX - targetX) * 0.05;
                     targetY += (mouseY - targetY) * 0.05;
-                    sphere.position.x = targetX * 2;
-                    sphere.position.y = -targetY * 2;
-                    innerSphere.position.x = targetX * 1.5;
-                    innerSphere.position.y = -targetY * 1.5;
+                    textGroup.position.x = targetX * 2;
+                    textGroup.position.y = -targetY * 2;
                     renderer.render(scene, camera);
                 }
                 animate();
