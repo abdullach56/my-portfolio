@@ -353,28 +353,28 @@
                     color: 0x919095,
                     wireframe: true,
                     transparent: true,
-                    opacity: 0.12
+                    opacity: 0.35
                 });
 
                 // Letter "D" geometry
-                const dGeometry = new THREE.BoxGeometry(0.8, 2, 0.3);
+                const dGeometry = new THREE.BoxGeometry(1.2, 3, 0.4);
                 const dMesh = new THREE.Mesh(dGeometry, letterMaterial);
-                dMesh.position.x = -1.2;
+                dMesh.position.x = -1.8;
                 textGroup.add(dMesh);
 
                 // Letter "F" geometry
-                const fGeometry = new THREE.BoxGeometry(0.8, 2, 0.3);
+                const fGeometry = new THREE.BoxGeometry(1.2, 3, 0.4);
                 const fMesh = new THREE.Mesh(fGeometry, letterMaterial);
-                fMesh.position.x = 1.2;
+                fMesh.position.x = 1.8;
                 textGroup.add(fMesh);
 
                 // Add decorative accent
-                const accentGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+                const accentGeometry = new THREE.SphereGeometry(0.25, 8, 8);
                 const accentMaterial = new THREE.MeshBasicMaterial({
                     color: 0xc7c6cd,
                     wireframe: true,
                     transparent: true,
-                    opacity: 0.08
+                    opacity: 0.25
                 });
                 const accent = new THREE.Mesh(accentGeometry, accentMaterial);
                 accent.position.z = 0.5;
