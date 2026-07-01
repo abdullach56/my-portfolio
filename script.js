@@ -11,6 +11,7 @@ const STORAGE_KEY = 'studio_dev_projects_v1';
 const PIN_KEY = 'studio_dev_admin_pin_v1';
 const GITHUB_TOKEN_KEY = 'studio_dev_github_token';
 const DEFAULT_PIN = 'BHHB';
+const INITIAL_PAYLOAD_PATH = 'initial_payload.json';
 
 document.addEventListener('DOMContentLoaded', async () => {
     await initData();
@@ -20,25 +21,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // --- DATA LAYER ---
 async function initData() {
-    // 1. Try to fetch the global projects file from GitHub/Server
+    const localData = localStorage.getItem(STORAGE_KEY);
+    let loadedFromRemote = false;
+
+    // 1. Try to fetch the global projects file from GitHub/Server first.
+    // This is the shared source of truth for all browsers.
     try {
         const response = await fetch('projects.json?t=' + Date.now());
         if (response.ok) {
             const globalData = await response.json();
-            // If we have global data, and no local "drafts", use global
-            if (!localStorage.getItem(STORAGE_KEY)) {
+            if (Array.isArray(globalData)) {
+                projects = globalData;
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(globalData));
+                loadedFromRemote = true;
             }
-            projects = globalData;
         }
     } catch (e) {
-        console.log("No global projects.json found, using local storage.");
+        console.log("No global projects.json found, falling back to local data.");
     }
 
-    // 2. Load the current working version (Draft) from LocalStorage
-    const localData = localStorage.getItem(STORAGE_KEY);
-    if (localData) {
-        projects = JSON.parse(localData);
+    // 2. If there is no remote data, use the browser's local draft.
+    if (!loadedFromRemote) {
+        if (localData) {
+            try {
+                const parsedLocal = JSON.parse(localData);
+                if (Array.isArray(parsedLocal)) {
+                    projects = parsedLocal;
+                }
+            } catch (e) {
+                console.log("Invalid local projects data, using fallback.");
+            }
+        }
+
+        // 3. If nothing exists yet, use the initial payload as a starter set.
+        if (!projects.length) {
+            try {
+                const fallbackResponse = await fetch(`${INITIAL_PAYLOAD_PATH}?t=${Date.now()}`);
+                if (fallbackResponse.ok) {
+                    const fallbackData = await fallbackResponse.json();
+                    if (Array.isArray(fallbackData)) {
+                        projects = fallbackData;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(fallbackData));
+                    }
+                }
+            } catch (e) {
+                console.log("No initial payload found.");
+            }
+        }
     }
 }
 
@@ -345,6 +374,7 @@ window.publishToGitHub = async function() {
         });
 
         if (putRes.ok) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
             statusEl.classList.remove('text-outline');
             statusEl.classList.add('text-primary');
             statusEl.innerText = "DEPLOYMENT SUCCESSFUL // WORLD SYNCHRONIZED";
